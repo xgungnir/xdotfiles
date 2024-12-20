@@ -1,0 +1,14 @@
+[include]
+    path = ~/.custom/.gitconfig
+[filter "lfs"]
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+[core]
+	protectNTFS = false
+	excludesfile = ~/.gitignore_global
+[credential "https://dev.azure.com"]
+	useHttpPath = true
+[credential]
+	helper = /usr/local/share/gcm-core/git-credential-manager	

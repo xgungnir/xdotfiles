@@ -1,0 +1,15 @@
+.DS_Store
+*.swp
+nvim-astro
+clash
+test.sh
+
+custom/.custom/*
+!custom/.custom/.gitconfig.example
+!custom/.custom/proxy.sh.example
+
+iterm2/.config/iterm2/*
+!iterm2/.config/iterm2/custom
+
+ssh/.ssh/*
+!ssh/.ssh/config

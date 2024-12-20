@@ -1,0 +1,9 @@
+[user]
+	email =
+	name = 
+[http]
+	proxy =
+	sslVerify =
+[https]
+	proxy =
+

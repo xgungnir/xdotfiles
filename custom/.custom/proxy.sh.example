@@ -1,0 +1,20 @@
+#!/bin/sh
+
+PROXY_FLAG=true
+
+# Check if the flag is true
+if [ "$PROXY_FLAG" = true ]; then
+  # Set proxy environment variables
+  export all_proxy=""
+  export http_proxy=""
+  export https_proxy=""
+  export no_proxy=""
+  export ALL_PROXY=""
+  export HTTP_PROXY=""
+  export HTTPS_PROXY=""
+  export NO_PROXY=""
+
+  echo "Proxy settings applied."
+else
+  echo "No need for proxy"
+fi
