@@ -40,6 +40,7 @@ brew "colima", args: ["HEAD"]
 cask "git-credential-manager"
 cask "session-manager-plugin"
 cask "hammerspoon"
+cask "alt-tab"
 cask "wezterm@nightly"
 cask "bluesnooze"
 cask "neovide"

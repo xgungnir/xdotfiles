@@ -1,6 +1,6 @@
 #! /bin/sh
 if [[ -z $STOW_FOLDERS ]]; then
-    STOW_FOLDERS="custom,ssh,wezterm,zsh,hammerspoon,git,mise,iterm2,nvim-astro,clash"
+    STOW_FOLDERS="custom,ssh,wezterm,zsh,hammerspoon,git,mise,iterm2,alttab,nvim-astro,clash"
 fi
 
 if [[ -z $DOTFILES ]]; then
