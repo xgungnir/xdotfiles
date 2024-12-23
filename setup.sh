@@ -34,6 +34,7 @@ source ./stow.sh
 echo "Hardcopying ..."
 source ./hardcopy.sh
 pushKarabinerConfig
+pushAlttabConfig
 
 echo "Kill affected applications"
 for app in Safari Finder Dock Mail SystemUIServer; do killall "$app" >/dev/null 2>&1; done

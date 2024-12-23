@@ -12,3 +12,12 @@ pullKarabinerConfig() {
     # Copy main config file
     cp -f ~/.config/karabiner/karabiner.json ./karabiner/.config/karabiner/
 }
+
+pullAlttabConfig() {
+    defaults export com.lwouis.alt-tab-macos ./alttab/Library/Preferences/com.lwouis.alt-tab-macos.plist
+}
+
+pushAlttabConfig() {
+    defaults delete com.lwouis.alt-tab-macos
+    defaults import com.lwouis.alt-tab-macos ./alttab/Library/Preferences/com.lwouis.alt-tab-macos.plist
+}
