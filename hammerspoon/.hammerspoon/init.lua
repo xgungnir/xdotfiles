@@ -1,3 +1,4 @@
+require('./ime-indicator')
 --
 local function focus_other_screen() -- focuses the other screen
    local screen = hs.mouse.getCurrentScreen()
@@ -37,6 +38,7 @@ local doubleTapInterval = 250 -- Time in milliseconds to consider for double tap
 function switchToEnglishABC()
    -- Get current input source
    local currentSource = hs.keycodes.currentSourceID()
+   print(currentSource)
 
    -- Check if the current source is not English ABC, then switch
    if currentSource ~= "com.apple.keylayout.ABC" then
