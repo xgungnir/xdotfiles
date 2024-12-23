@@ -3,49 +3,60 @@
 -- Credit to https://github.com/xiaojundebug/hammerspoon-config
 -- **************************************************
 
+local obj = {
+  hs = hs
+}
+obj.__index = obj
+
+-- Module level variables
+obj.canvases = {}
+obj.lastSourceID = nil
+obj.distributedNotification = nil
+obj.indicatorSyncTimer = nil
+obj.screenWatcher = nil
+
 -- --------------------------------------------------
--- Indicator height
-local HEIHGT = 5
--- Indicator transparency
-local ALPHA = 1
--- Linear gradient between multiple colors
-local ALLOW_LINEAR_GRADIENT = false
--- Indicator colors
-local IME_TO_COLORS = {
-  -- Squirrel Input Method
-  ['im.rime.inputmethod.Squirrel.Hans'] = {
-    -- { hex = '#dc2626' },
-    -- { hex = '#eab308' },
-    { hex = '#0ea5e9' }
-  },
-  ['im.rime.inputmethod.Squirrel.Hant'] = {
-    { hex = '#0ea5e9' }
+-- Configuration
+obj.config = {
+  -- Indicator height
+  HEIGHT = 5,
+  -- Indicator transparency
+  ALPHA = 1,
+  -- Linear gradient between multiple colors
+  ALLOW_LINEAR_GRADIENT = false,
+  -- Indicator colors
+  IME_TO_COLORS = {
+    -- Squirrel Input Method
+    ['im.rime.inputmethod.Squirrel.Hans'] = {
+      -- { hex = '#dc2626' },
+      -- { hex = '#0ea5e9' },
+      { hex = '#0ea5e9' }
+    },
+    ['im.rime.inputmethod.Squirrel.Hant'] = {
+      { hex = '#0ea5e9' }
+    }
   }
 }
--- --------------------------------------------------
-
-local canvases = {}
-local lastSourceID = nil
 
 -- Draw indicator
-local function draw(colors)
-  local screens = hs.screen.allScreens()
+function obj:draw(colors)
+  local screens = self.hs.screen.allScreens()
 
   for i, screen in ipairs(screens) do
     local frame = screen:fullFrame()
 
-    local canvas = hs.canvas.new({ x = frame.x, y = frame.y, w = frame.w, h = HEIHGT })
-    canvas:level(hs.canvas.windowLevels.overlay)
-    canvas:behavior(hs.canvas.windowBehaviors.canJoinAllSpaces)
-    canvas:alpha(ALPHA)
+    local canvas = self.hs.canvas.new({ x = frame.x, y = frame.y, w = frame.w, h = self.config.HEIGHT })
+    canvas:level(self.hs.canvas.windowLevels.overlay)
+    canvas:behavior(self.hs.canvas.windowBehaviors.canJoinAllSpaces)
+    canvas:alpha(self.config.ALPHA)
 
-    if ALLOW_LINEAR_GRADIENT and #colors > 1 then
+    if self.config.ALLOW_LINEAR_GRADIENT and #colors > 1 then
       local rect = {
         type = 'rectangle',
         action = 'fill',
         fillGradient = 'linear',
         fillGradientColors = colors,
-        frame = { x = 0, y = 0, w = frame.w, h = HEIHGT }
+        frame = { x = 0, y = 0, w = frame.w, h = self.config.HEIGHT }
       }
       canvas[1] = rect
     else
@@ -58,61 +69,87 @@ local function draw(colors)
           type = 'rectangle',
           action = 'fill',
           fillColor = color,
-          frame = { x = startX, y = startY, w = cellW, h = HEIHGT }
+          frame = { x = startX, y = startY, w = cellW, h = self.config.HEIGHT }
         }
         canvas[j] = rect
       end
     end
 
     canvas:show()
-    canvases[i] = canvas
+    self.canvases[i] = canvas
   end
 end
 
 -- Clear canvas content
-local function clear()
-  for _, canvas in ipairs(canvases) do
+function obj:clear()
+  for _, canvas in ipairs(self.canvases) do
     canvas:delete()
   end
-  canvases = {}
+  self.canvases = {}
 end
 
 -- Update canvas display
-local function update(sourceID)
-  clear()
+function obj:update(sourceID)
+  self:clear()
 
-  local colors = IME_TO_COLORS[sourceID or hs.keycodes.currentSourceID()]
+  local colors = self.config.IME_TO_COLORS[sourceID or self.hs.keycodes.currentSourceID()]
 
   if colors then
-    draw(colors)
+    self:draw(colors)
   end
 end
 
-local function handleInputSourceChanged()
-  local currentSourceID = hs.keycodes.currentSourceID()
+function obj:handleInputSourceChanged()
+  local currentSourceID = self.hs.keycodes.currentSourceID()
 
-  if lastSourceID ~= currentSourceID then
-    update(currentSourceID)
-    lastSourceID = currentSourceID
+  if self.lastSourceID ~= currentSourceID then
+    self:update(currentSourceID)
+    self.lastSourceID = currentSourceID
   end
 end
 
--- Input method change event listener
--- Sometimes hs.keycodes.inputSourceChanged doesn't trigger, monitoring system events solves this
--- Reference: https://github.com/Hammerspoon/hammerspoon/issues/1499
-imi_dn = hs.distributednotifications.new(
-  handleInputSourceChanged,
-  -- or 'AppleSelectedInputSourcesChangedNotification'
-  'com.apple.Carbon.TISNotifySelectedKeyboardInputSourceChanged'
-)
--- Sync every second to avoid state desync due to missed event listeners
-imi_indicatorSyncTimer = hs.timer.new(1, handleInputSourceChanged)
--- Re-render when screen changes
-imi_screenWatcher = hs.screen.watcher.new(update)
+function obj:init()
+  -- Input method change event listener
+  -- Sometimes hs.keycodes.inputSourceChanged doesn't trigger, monitoring system events solves this
+  -- Reference: https://github.com/Hammerspoon/hammerspoon/issues/1499
+  self.distributedNotification = self.hs.distributednotifications.new(
+    function() self:handleInputSourceChanged() end,
+    -- or 'AppleSelectedInputSourcesChangedNotification'
+    'com.apple.Carbon.TISNotifySelectedKeyboardInputSourceChanged'
+  )
 
-imi_dn:start()
-imi_indicatorSyncTimer:start()
-imi_screenWatcher:start()
+  -- Sync every second to avoid state desync due to missed event listeners
+  self.indicatorSyncTimer = self.hs.timer.new(
+    1,
+    function() self:handleInputSourceChanged() end
+  )
 
--- Initial execution
-update()
+  -- Re-render when screen changes
+  self.screenWatcher = self.hs.screen.watcher.new(
+    function() self:update() end
+  )
+
+  -- Start all watchers
+  self:start()
+
+  -- Initial execution
+  self:update()
+
+  return self
+end
+
+-- Start all watchers
+function obj:start()
+  self.distributedNotification:start()
+  self.indicatorSyncTimer:start()
+  self.screenWatcher:start()
+end
+
+-- Stop all watchers
+function obj:stop()
+  self.distributedNotification:stop()
+  self.indicatorSyncTimer:stop()
+  self.screenWatcher:stop()
+end
+
+return obj

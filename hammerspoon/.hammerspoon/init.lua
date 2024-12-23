@@ -1,4 +1,4 @@
-require('./ime-indicator')
+require('./ime-indicator'):init()
 --
 local function focus_other_screen() -- focuses the other screen
    local screen = hs.mouse.getCurrentScreen()
