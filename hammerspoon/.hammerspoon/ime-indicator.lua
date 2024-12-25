@@ -3,12 +3,10 @@
 -- Credit to https://github.com/xiaojundebug/hammerspoon-config
 -- **************************************************
 
-local obj = {
-  hs = hs
-}
+local obj = {}
 obj.__index = obj
+obj.hs = hs
 
--- Module level variables
 obj.canvases = {}
 obj.lastSourceID = nil
 obj.distributedNotification = nil
@@ -18,61 +16,58 @@ obj.screenWatcher = nil
 -- --------------------------------------------------
 -- Configuration
 obj.config = {
-  -- Indicator height
   HEIGHT = 5,
-  -- Indicator transparency
   ALPHA = 1,
-  -- Linear gradient between multiple colors
-  ALLOW_LINEAR_GRADIENT = false,
-  -- Indicator colors
-  IME_TO_COLORS = {
-    -- Squirrel Input Method
+  IME_COLORS = {
     ['im.rime.inputmethod.Squirrel.Hans'] = {
       -- { hex = '#dc2626' },
-      -- { hex = '#0ea5e9' },
+      -- { hex = '#eab308' },
       { hex = '#0ea5e9' }
     },
-    ['im.rime.inputmethod.Squirrel.Hant'] = {
-      { hex = '#0ea5e9' }
-    }
+    ['im.rime.inputmethod.Squirrel.Hant'] = {{ hex = '#0ea5e9' }}
   }
 }
 
+-- Cache frequently used functions for better performance
+local floor = math.floor
+local allScreens = hs.screen.allScreens
+local windowLevels = hs.canvas.windowLevels
+local windowBehaviors = hs.canvas.windowBehaviors
+
 -- Draw indicator
 function obj:draw(colors)
-  local screens = self.hs.screen.allScreens()
-
+  local screens = allScreens()
+  
   for i, screen in ipairs(screens) do
     local frame = screen:fullFrame()
-
-    local canvas = self.hs.canvas.new({ x = frame.x, y = frame.y, w = frame.w, h = self.config.HEIGHT })
-    canvas:level(self.hs.canvas.windowLevels.overlay)
-    canvas:behavior(self.hs.canvas.windowBehaviors.canJoinAllSpaces)
+    local canvas = hs.canvas.new({ 
+      x = floor(frame.x), 
+      y = floor(frame.y), 
+      w = floor(frame.w), 
+      h = self.config.HEIGHT 
+    })
+    
+    canvas:level(windowLevels.overlay)
+    canvas:behavior(windowBehaviors.canJoinAllSpaces)
     canvas:alpha(self.config.ALPHA)
 
-    if self.config.ALLOW_LINEAR_GRADIENT and #colors > 1 then
+    if #colors == 1 then
+      canvas[1] = {
+        type = 'rectangle',
+        action = 'fill',
+        fillColor = colors[1],
+        frame = { x = 0, y = 0, w = frame.w, h = self.config.HEIGHT }
+      }
+    else
+      -- Multi-color handling
       local rect = {
         type = 'rectangle',
         action = 'fill',
         fillGradient = 'linear',
         fillGradientColors = colors,
-        frame = { x = 0, y = 0, w = frame.w, h = self.config.HEIGHT }
+        frame = { x = 0, y = 0, w = frame.w, h = HEIHGT }
       }
       canvas[1] = rect
-    else
-      local cellW = frame.w / #colors
-
-      for j, color in ipairs(colors) do
-        local startX = (j - 1) * cellW
-        local startY = 0
-        local rect = {
-          type = 'rectangle',
-          action = 'fill',
-          fillColor = color,
-          frame = { x = startX, y = startY, w = cellW, h = self.config.HEIGHT }
-        }
-        canvas[j] = rect
-      end
     end
 
     canvas:show()
@@ -88,12 +83,11 @@ function obj:clear()
   self.canvases = {}
 end
 
--- Update canvas display
 function obj:update(sourceID)
   self:clear()
-
-  local colors = self.config.IME_TO_COLORS[sourceID or self.hs.keycodes.currentSourceID()]
-
+  local currentSourceID = sourceID or self.hs.keycodes.currentSourceID()
+  local colors = self.config.IME_COLORS[currentSourceID]
+  
   if colors then
     self:draw(colors)
   end
