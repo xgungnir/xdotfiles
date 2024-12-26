@@ -1,5 +1,6 @@
 require('./ime-indicator'):init()
 require('./ime-switcher'):init()
+require('./window'):init()
 --
 local function focus_other_screen() -- focuses the other screen
    local screen = hs.mouse.getCurrentScreen()
