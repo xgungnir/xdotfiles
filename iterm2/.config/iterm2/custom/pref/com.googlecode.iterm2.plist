@@ -6,6 +6,8 @@
 	<true/>
 	<key>Default Bookmark Guid</key>
 	<string>2BAB9FE6-8A88-48BE-B33A-EA72D4C4F72E</string>
+	<key>DockIconTogglesWindow</key>
+	<false/>
 	<key>FocusFollowsMouse</key>
 	<true/>
 	<key>HapticFeedbackForEsc</key>
@@ -281,9 +283,9 @@
 			<key>HotKey Window Animates</key>
 			<false/>
 			<key>HotKey Window AutoHides</key>
-			<true/>
+			<false/>
 			<key>HotKey Window Dock Click Action</key>
-			<integer>0</integer>
+			<integer>2</integer>
 			<key>HotKey Window Floats</key>
 			<true/>
 			<key>HotKey Window Reopens On Activation</key>
@@ -1334,7 +1336,7 @@
 	<key>ShowFullScreenTabBar</key>
 	<true/>
 	<key>SmartPlacement</key>
-	<true/>
+	<false/>
 	<key>SoundForEsc</key>
 	<false/>
 	<key>StatusBarIcon</key>
