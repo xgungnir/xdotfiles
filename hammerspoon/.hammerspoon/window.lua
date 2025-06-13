@@ -116,6 +116,34 @@ function obj:move_window_to_previous_desktop()
     end)
 end
 
+function obj:move_one_screen_north()
+    local win = self.hs.window.focusedWindow()
+    if win then
+        win:moveOneScreenNorth(nil, true)
+    end
+end
+
+function obj:move_one_screen_south()
+    local win = self.hs.window.focusedWindow()
+    if win then
+        win:moveOneScreenSouth(nil, true)
+    end
+end
+
+function obj:move_one_screen_west()
+    local win = self.hs.window.focusedWindow()
+    if win then
+        win:moveOneScreenWest(nil, true)
+    end
+end
+
+function obj:move_one_screen_east()
+    local win = self.hs.window.focusedWindow()
+    if win then
+        win:moveOneScreenEast(nil, true)
+    end
+end
+
 function obj:init()
     if not self.hs then
         error("Hammerspoon API not available")
@@ -125,6 +153,10 @@ function obj:init()
     -- Set up key bindings
     self.hs.hotkey.bind({"cmd", "ctrl"}, "i", function() self:move_window_to_next_desktop() end)
     self.hs.hotkey.bind({"cmd", "ctrl"}, "u", function() self:move_window_to_previous_desktop() end)
+    self.hs.hotkey.bind({"cmd", "ctrl"}, "up", function() self:move_one_screen_north() end)
+    self.hs.hotkey.bind({"cmd", "ctrl"}, "down", function() self:move_one_screen_south() end)
+    self.hs.hotkey.bind({"cmd", "ctrl"}, "left", function() self:move_one_screen_west() end)
+    self.hs.hotkey.bind({"cmd", "ctrl"}, "right", function() self:move_one_screen_east() end)
 end
 
 return obj
