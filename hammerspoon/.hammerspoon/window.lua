@@ -10,6 +10,7 @@ local MOUSE_OFFSET_X = 5
 local MOUSE_OFFSET_Y = 12
 local SWITCH_DELAY = 0.2
 local RELEASE_DELAY = 0.5
+local GAP = 8
 
 local function simulateKeyEvent(modifier, key)
    obj.hs.eventtap.event.newKeyEvent(modifier, true):post()
@@ -144,6 +145,24 @@ function obj:move_one_screen_east()
     end
 end
 
+function obj:maximize_with_gap()
+    local win = self.hs.window.focusedWindow()
+    if win then
+        local screen = win:screen()
+        if screen then
+            local frame = screen:frame()
+            local newFrame = {
+                x = frame.x + GAP,
+                y = frame.y + GAP,
+                w = frame.w - 2 * GAP,
+                h = frame.h - 2 * GAP
+            }
+            win:setFrame(newFrame)
+            -- win:setFrameCorrectness(newFrame)
+        end
+    end
+end
+
 function obj:init()
     if not self.hs then
         error("Hammerspoon API not available")
@@ -153,6 +172,7 @@ function obj:init()
     -- Set up key bindings
     self.hs.hotkey.bind({"cmd", "ctrl"}, "i", function() self:move_window_to_next_desktop() end)
     self.hs.hotkey.bind({"cmd", "ctrl"}, "u", function() self:move_window_to_previous_desktop() end)
+    self.hs.hotkey.bind({"cmd", "ctrl"}, "m", function() self:maximize_with_gap() end)
     self.hs.hotkey.bind({"cmd", "ctrl"}, "up", function() self:move_one_screen_north() end)
     self.hs.hotkey.bind({"cmd", "ctrl"}, "down", function() self:move_one_screen_south() end)
     self.hs.hotkey.bind({"cmd", "ctrl"}, "left", function() self:move_one_screen_west() end)

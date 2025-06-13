@@ -1,3 +1,4 @@
+hs.window.animationDuration = 0
 require('./ime-indicator'):init()
 require('./ime-switcher'):init()
 require('./window'):init()
