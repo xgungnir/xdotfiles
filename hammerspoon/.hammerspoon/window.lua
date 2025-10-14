@@ -8,9 +8,9 @@ obj.isMoving = false
 -- Constants
 local MOUSE_OFFSET_X = 5
 local MOUSE_OFFSET_Y = 12
-local SWITCH_DELAY = 0.2
-local RELEASE_DELAY = 0.5
+local RELEASE_DELAY = 0.6
 local GAP = 8
+local SPECIAL_APP_TITLES = {"Telegram"}  -- List of app names to match for special mouse adjustment
 
 local function simulateKeyEvent(modifier, key)
    obj.hs.eventtap.event.newKeyEvent(modifier, true):post()
@@ -21,7 +21,19 @@ local function simulateKeyEvent(modifier, key)
    end)
 end
 
-function obj:move_window_to_next_desktop()
+local function isSpecialApp(appName)
+   if not appName then return false end
+   local lowerAppName = appName:lower()
+   for _, specialApp in ipairs(SPECIAL_APP_TITLES) do
+      if lowerAppName:find(specialApp:lower(), 1, true) then
+         return true
+      end
+   end
+   return false
+end
+
+-- Shared helper to move window across spaces using coroutine + timer hybrid
+local function moveWindowAcrossSpace(self, direction)
     if self.isMoving then return end
     self.isMoving = true
 
@@ -31,90 +43,113 @@ function obj:move_window_to_next_desktop()
         self.isMoving = false
         return 
     end
-    win:unminimize()
-    win:raise()
-    
-    -- Check if we're on the rightmost desktop
-    local spaces = self.hs.spaces.spacesForScreen()
-    local currentSpace = self.hs.spaces.focusedSpace()
-    
-    if currentSpace == spaces[#spaces] then
-        self.hs.alert.show("Already at the rightmost desktop.")
+
+    -- Guard: Finder Desktop pseudo-window can be larger than the screen resolution
+    local app = win:application()
+    local bundleID = app:bundleID()
+    local screen = win:screen()
+    local screenFrame = screen:frame()
+    local winFrame = win:frame()
+    if bundleID == "com.apple.finder" and 
+       winFrame.w > screenFrame.w and 
+       winFrame.h > screenFrame.h then
         self.isMoving = false
         return
     end
-    
-    -- Get window frame and calculate positions
+
+    win:unminimize()
+    win:raise()
+
+    -- Bounds check based on direction
+    local spaces = self.hs.spaces.spacesForScreen()
+    local currentSpace = self.hs.spaces.focusedSpace()
+    if direction == "right" then
+        if currentSpace == spaces[#spaces] then
+            self.hs.alert.show("Already at the rightmost desktop.")
+            self.isMoving = false
+            return
+        end
+    else
+        if currentSpace == spaces[1] then
+            self.hs.alert.show("Already at the leftmost desktop.")
+            self.isMoving = false
+            return
+        end
+    end
+
+    -- Positions and app info
     local frame = win:frame()
+    local app = win:application()
+    local appName = app and app:name() or ""
+    local originalFrame = nil
+    if isSpecialApp(appName) then
+        originalFrame = { x = frame.x, y = frame.y, w = frame.w, h = frame.h }
+    end
     local clickPos = self.hs.geometry.point(frame.x + MOUSE_OFFSET_X, frame.y + MOUSE_OFFSET_Y)
     local centerPos = self.hs.geometry.point(frame.x + frame.w/2, frame.y + frame.h/2)
-    
-    -- Move mouse to click position
-    self.hs.mouse.absolutePosition(clickPos)
-    
-    -- Simulate mouse press and desktop switch
-    self.hs.eventtap.event.newMouseEvent(self.hs.eventtap.event.types.leftMouseDown, clickPos):post()
-    
-    self.hs.timer.doAfter(SWITCH_DELAY, function()
-        simulateKeyEvent("ctrl", "right")
+
+
+    -- Perform sequence in coroutine for reliable event processing
+    local cr
+    cr = coroutine.wrap(function()
+        -- Move mouse to click position
+        coroutine.applicationYield()
+        self.hs.mouse.absolutePosition(clickPos)
+        self.hs.timer.usleep(20000)
+
+        -- mouseDown
+        coroutine.applicationYield()
+        self.hs.eventtap.event
+          .newMouseEvent(self.hs.eventtap.event.types.leftMouseDown, clickPos)
+          :post()
+        self.hs.timer.usleep(30000)
+
+        -- optional small drag for special apps
+        if isSpecialApp(appName) then
+            coroutine.applicationYield()
+            local adjustedPos = self.hs.geometry.point(clickPos.x + 1, clickPos.y)
+            self.hs.eventtap.event
+              .newMouseEvent(self.hs.eventtap.event.types.leftMouseDragged, adjustedPos)
+              :setProperty(self.hs.eventtap.event.properties.mouseEventDeltaX, 1)
+              :post()
+            self.hs.timer.usleep(20000)
+        end
+
+        -- trigger desktop switch immediately after initial sequence
+        coroutine.applicationYield()
+        if direction == "right" then
+            simulateKeyEvent("ctrl", "right")
+        else
+            simulateKeyEvent("ctrl", "left")
+        end
+
+        cr = nil -- clear to avoid premature GC issues
+
+        -- schedule release/restore after system animation period finishes
+        self.hs.timer.doAfter(RELEASE_DELAY, function()
+            local finalPos = self.hs.mouse.absolutePosition()
+            self.hs.eventtap.event
+              .newMouseEvent(self.hs.eventtap.event.types.leftMouseUp, finalPos)
+              :post()
+            if originalFrame then
+                win:setFrame(originalFrame)
+            end
+            self.hs.mouse.absolutePosition(centerPos)
+            win:raise()
+            win:focus()
+            self.isMoving = false
+        end)
     end)
 
-    -- Release mouse and restore position
-    self.hs.timer.doAfter(RELEASE_DELAY, function()
-        self.hs.eventtap.event.newMouseEvent(self.hs.eventtap.event.types.leftMouseUp, clickPos):post()
-        self.hs.mouse.absolutePosition(centerPos)
-        win:raise()
-        win:focus()
-        self.isMoving = false
-    end)
+    cr() -- start coroutine
+end
+
+function obj:move_window_to_next_desktop()
+    moveWindowAcrossSpace(self, "right")
 end
 
 function obj:move_window_to_previous_desktop()
-    if self.isMoving then return end
-    self.isMoving = true
-
-    -- Check if we're on the leftmost desktop
-    local spaces = self.hs.spaces.spacesForScreen()
-    local currentSpace = self.hs.spaces.focusedSpace()
-    
-    if currentSpace == spaces[1] then
-        self.hs.alert.show("Already at the leftmost desktop.")
-        self.isMoving = false
-        return
-    end
-    
-    -- Get current active window and make it frontmost
-    local win = self.hs.window.focusedWindow()
-    if not win then 
-        self.isMoving = false
-        return 
-    end
-    win:unminimize()
-    win:raise()
-    
-    -- Get window frame and calculate positions
-    local frame = win:frame()
-    local clickPos = self.hs.geometry.point(frame.x + MOUSE_OFFSET_X, frame.y + MOUSE_OFFSET_Y)
-    local centerPos = self.hs.geometry.point(frame.x + frame.w/2, frame.y + frame.h/2)
-    
-    -- Move mouse to click position
-    self.hs.mouse.absolutePosition(clickPos)
-    
-    -- Simulate mouse press and desktop switch
-    self.hs.eventtap.event.newMouseEvent(self.hs.eventtap.event.types.leftMouseDown, clickPos):post()
-    
-    self.hs.timer.doAfter(SWITCH_DELAY, function()
-        simulateKeyEvent("ctrl", "left")
-    end)
-
-    -- Release mouse and restore position
-    self.hs.timer.doAfter(RELEASE_DELAY, function()
-        self.hs.eventtap.event.newMouseEvent(self.hs.eventtap.event.types.leftMouseUp, clickPos):post()
-        self.hs.mouse.absolutePosition(centerPos)
-        win:raise()
-        win:focus()
-        self.isMoving = false
-    end)
+    moveWindowAcrossSpace(self, "left")
 end
 
 function obj:move_one_screen_north()
