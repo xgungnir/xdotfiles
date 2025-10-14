@@ -15,7 +15,7 @@ local SPECIAL_APP_TITLES = {"Telegram"}  -- List of app names to match for speci
 local function simulateKeyEvent(modifier, key)
    obj.hs.eventtap.event.newKeyEvent(modifier, true):post()
    obj.hs.eventtap.event.newKeyEvent(key, true):post()
-   obj.hs.timer.doAfter(0.1, function() 
+   obj.hs.timer.doAfter(0, function() 
       obj.hs.eventtap.event.newKeyEvent(modifier, false):post()
       obj.hs.eventtap.event.newKeyEvent(key, false):post()
    end)
@@ -134,10 +134,12 @@ local function moveWindowAcrossSpace(self, direction)
             if originalFrame then
                 win:setFrame(originalFrame)
             end
-            self.hs.mouse.absolutePosition(centerPos)
             win:raise()
             win:focus()
-            self.isMoving = false
+            self.hs.mouse.absolutePosition(centerPos)
+            self.hs.timer.doAfter(0.1, function()
+                self.isMoving = false
+            end)
         end)
     end)
 
