@@ -2,6 +2,8 @@ hs.window.animationDuration = 0
 require('./ime-indicator'):init()
 require('./ime-switcher'):init()
 require('./window'):init()
+require('./fake-screensaver'):init()
+require('./fake-screensaver'):init()
 --
 local function focus_other_screen() -- focuses the other screen
    local screen = hs.mouse.getCurrentScreen()
