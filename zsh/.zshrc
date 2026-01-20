@@ -61,6 +61,13 @@ path=(~/bin $path)
 # Export environment variables.
 export GPG_TTY=$TTY
 
+# uv (Astral) shell completions.
+# Reference: eval "$(uv generat-shell-completion zsh)"
+if command -v uv >/dev/null 2>&1; then
+  eval "$(uv generate-shell-completion zsh)"
+fi
+
+
 # Source additional local files if they exist.
 # z4h source ~/.env.zsh
 z4h source ~/.custom/.zshrc
